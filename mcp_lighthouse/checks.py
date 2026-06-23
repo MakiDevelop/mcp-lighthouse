@@ -7,7 +7,7 @@ from typing import Any, Awaitable, Callable
 from .transport import JsonRpcError, TransportError
 
 
-KNOWN_PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18"}
+KNOWN_PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 
 
 @dataclass
@@ -185,8 +185,8 @@ async def schema_required_fields(transport: Any) -> CheckResult:
 @check("schema-no-duplicate-tools", "No duplicate tools", "schema", "warning")
 async def schema_no_duplicate_tools(transport: Any) -> CheckResult:
     tools = await _tools(transport)
-    names = [tool.get("name") for tool in tools if isinstance(tool.get("name"), str)]
-    duplicates = sorted({name for name in names if names.count(name) > 1})
+    names: list[str] = [tool["name"] for tool in tools if isinstance(tool.get("name"), str)]
+    duplicates = sorted(n for n in set(names) if names.count(n) > 1)
     return _result("schema-no-duplicate-tools", not duplicates, "No duplicate tool names" if not duplicates else f"Duplicate tool names: {', '.join(duplicates)}")
 
 
