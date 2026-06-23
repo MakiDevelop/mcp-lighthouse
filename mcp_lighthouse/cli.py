@@ -4,9 +4,11 @@ import argparse
 import asyncio
 from pathlib import Path
 
+from rich.console import Console
+
 from .checks import all_checks, run_all_checks
 from .reporter import render_markdown, render_terminal
-from .transport import StdioTransport
+from .transport import StdioTransport, TransportError
 
 
 VALID_CATEGORIES = ["protocol", "schema", "robustness", "best_practices", "performance"]
@@ -46,6 +48,9 @@ async def _scan(args: argparse.Namespace) -> None:
         render_terminal(results, transport.server_info)
         if args.report:
             Path(args.report).write_text(render_markdown(results, transport.server_info), encoding="utf-8")
+    except TransportError as exc:
+        Console(stderr=True).print(f"[red]Failed to start MCP server:[/red] {exc}")
+        raise SystemExit(1) from exc
     finally:
         await transport.close()
 

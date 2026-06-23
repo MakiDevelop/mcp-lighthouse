@@ -195,8 +195,10 @@ async def robust_unknown_method(transport: Any) -> CheckResult:
     try:
         await transport.send_request("foo/bar")
     except JsonRpcError as exc:
-        ok = exc.error.get("code") == -32601
-        return _result("robust-unknown-method", ok, "Unknown method returns -32601" if ok else f"Unknown method returned {exc.error.get('code')}")
+        code = exc.error.get("code")
+        if code == -32601:
+            return _result("robust-unknown-method", True, "Unknown method returns -32601")
+        return _result("robust-unknown-method", True, f"Unknown method returns error (code {code}, recommend -32601)")
     return _result("robust-unknown-method", False, "Unknown method did not return an error")
 
 
@@ -208,6 +210,9 @@ async def robust_invalid_tool(transport: Any) -> CheckResult:
         return _result("robust-invalid-tool", transport.is_running(), "Invalid tool returns an error without crashing")
     except TransportError as exc:
         return _result("robust-invalid-tool", False, f"Invalid tool broke transport: {exc}")
+    result = (transport.last_response or {}).get("result", {})
+    if isinstance(result, dict) and result.get("isError"):
+        return _result("robust-invalid-tool", True, "Invalid tool reported error via isError flag")
     return _result("robust-invalid-tool", False, "Invalid tool unexpectedly succeeded")
 
 
@@ -226,6 +231,9 @@ async def robust_missing_args(transport: Any) -> CheckResult:
         await transport.send_request("tools/call", {"name": candidate.get("name"), "arguments": {}})
     except JsonRpcError:
         return _result("robust-missing-args", transport.is_running(), "Missing required arguments return an error")
+    result = (transport.last_response or {}).get("result", {})
+    if isinstance(result, dict) and result.get("isError"):
+        return _result("robust-missing-args", True, "Missing args reported error via isError flag")
     return _result("robust-missing-args", False, f"{candidate.get('name')} accepted missing required arguments")
 
 
