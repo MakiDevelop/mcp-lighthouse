@@ -23,6 +23,7 @@ def main() -> None:
     scan_parser.add_argument("--report", help="write a Markdown report to this path")
     scan_parser.add_argument("--category", choices=VALID_CATEGORIES, action="append", help="run only this check category")
     scan_parser.add_argument("--timeout", type=float, default=10, help="transport timeout in seconds")
+    scan_parser.add_argument("--verbose", "-v", action="store_true", help="show detailed output per check")
 
     subparsers.add_parser("list", help="list registered checks")
 
@@ -45,11 +46,15 @@ async def _scan(args: argparse.Namespace) -> None:
         await transport.start()
         await transport.initialize()
         results = await run_all_checks(transport, categories=args.category)
-        render_terminal(results, transport.server_info)
+        render_terminal(results, transport.server_info, verbose=getattr(args, "verbose", False))
         if args.report:
             Path(args.report).write_text(render_markdown(results, transport.server_info), encoding="utf-8")
     except TransportError as exc:
-        Console(stderr=True).print(f"[red]Failed to start MCP server:[/red] {exc}")
+        console = Console(stderr=True)
+        console.print(f"[red]Failed to connect to MCP server:[/red] {exc}")
+        server_stderr = await transport.get_stderr()
+        if server_stderr:
+            console.print(f"[dim]Server stderr:[/dim]\n{server_stderr}")
         raise SystemExit(1) from exc
     finally:
         await transport.close()

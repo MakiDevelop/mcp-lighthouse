@@ -89,7 +89,7 @@ class StdioTransport:
             {
                 "protocolVersion": "2025-06-18",
                 "capabilities": {},
-                "clientInfo": {"name": "mcp-lighthouse", "version": "0.1.0"},
+                "clientInfo": {"name": "mcp-lighthouse", "version": "0.2.0"},
             },
         )
         self.initialize_elapsed_ms = (asyncio.get_running_loop().time() - start) * 1000
@@ -117,6 +117,16 @@ class StdioTransport:
 
     def is_running(self) -> bool:
         return self.process is not None and self.process.returncode is None
+
+    async def get_stderr(self) -> str:
+        """Read any stderr output from the subprocess."""
+        if self.process is None or self.process.stderr is None:
+            return ""
+        try:
+            data = await asyncio.wait_for(self.process.stderr.read(4096), timeout=0.5)
+            return data.decode("utf-8", errors="replace").strip()
+        except (asyncio.TimeoutError, Exception):
+            return ""
 
     async def close(self) -> None:
         if self.process is None:

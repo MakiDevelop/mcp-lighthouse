@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-lighthouse"
-version = "0.1.0"
+version = "0.2.0"
 description = "Audit tool for MCP servers — test protocol compliance, schema quality, and robustness"
 readme = "README.md"
 license = "MIT"

@@ -46,12 +46,12 @@ def overall_score(results: list[CheckResult]) -> int:
     return round(weighted)
 
 
-def render_terminal(results: list[CheckResult], server_info: dict[str, Any] | None = None) -> None:
+def render_terminal(results: list[CheckResult], server_info: dict[str, Any] | None = None, verbose: bool = False) -> None:
     try:
         from rich.console import Console
         from rich.text import Text
     except ImportError:
-        print(render_plain(results, server_info))
+        print(render_plain(results, server_info, verbose=verbose))
         return
 
     console = Console()
@@ -72,6 +72,13 @@ def render_terminal(results: list[CheckResult], server_info: dict[str, Any] | No
         style = "green" if result.passed else ("red" if result.severity == "critical" else "yellow")
         line = Text(f"  {icon} {result.check_id:<26} {result.message}", style=style)
         console.print(line)
+        if verbose and (result.details or result.elapsed_ms):
+            detail_parts = []
+            if result.elapsed_ms:
+                detail_parts.append(f"{result.elapsed_ms:.0f}ms")
+            if result.details:
+                detail_parts.append(result.details)
+            console.print(f"           [dim]{' | '.join(detail_parts)}[/dim]")
 
     passed = sum(1 for result in results if result.passed)
     warnings = sum(1 for result in results if not result.passed and result.severity != "critical")
@@ -79,7 +86,7 @@ def render_terminal(results: list[CheckResult], server_info: dict[str, Any] | No
     console.print(f"\n  {len(results)} checks: {passed} passed, {warnings} warnings, {failed} failed")
 
 
-def render_plain(results: list[CheckResult], server_info: dict[str, Any] | None = None) -> str:
+def render_plain(results: list[CheckResult], server_info: dict[str, Any] | None = None, verbose: bool = False) -> str:
     name = (server_info or {}).get("name", "unknown-server")
     version = (server_info or {}).get("version", "unknown")
     lines = [f"MCP Lighthouse — {name} v{version}", ""]
@@ -92,6 +99,13 @@ def render_plain(results: list[CheckResult], server_info: dict[str, Any] | None 
     for result in results:
         icon = "PASS" if result.passed else ("FAIL" if result.severity == "critical" else "WARN")
         lines.append(f"  {icon:<4} {result.check_id:<26} {result.message}")
+        if verbose and (result.details or result.elapsed_ms):
+            detail_parts = []
+            if result.elapsed_ms:
+                detail_parts.append(f"{result.elapsed_ms:.0f}ms")
+            if result.details:
+                detail_parts.append(result.details)
+            lines.append(f"           {' | '.join(detail_parts)}")
     return "\n".join(lines)
 
 
